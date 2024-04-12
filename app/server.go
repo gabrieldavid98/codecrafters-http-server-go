@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net"
 	"os"
+	"strings"
 )
 
 func main() {
@@ -45,15 +46,32 @@ func readConnToString(conn net.Conn) string {
 	return string(buff)
 }
 
-func responder(conn net.Conn, req *httpReq) {
+func responder(conn net.Conn, req *httpRequest) {
 	response := NotFoundResponse
 
 	if req.path == "/" {
 		response = OkResponse
 	}
 
+	if strings.HasPrefix(req.path, "/echo/") {
+		response = respondEcho(req)
+	}
+
 	if _, err := conn.Write([]byte(response)); err != nil {
 		fmt.Println("Error writing into connection: ", err.Error())
 		os.Exit(1)
 	}
+}
+
+func respondEcho(req *httpRequest) string {
+	param, _ := strings.CutPrefix(req.path, "/echo/")
+	response := &httpResponse{
+		status: 200,
+		body:   param,
+	}
+
+	response.withContentTypeHeader("text/plain")
+	response.withContentLengthHeader()
+
+	return response.String()
 }

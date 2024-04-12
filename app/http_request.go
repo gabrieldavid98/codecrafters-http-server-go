@@ -5,18 +5,18 @@ import (
 	"strings"
 )
 
-type httpReq struct {
+type httpRequest struct {
 	method      string
 	path        string
 	httpVersion string
 }
 
-func newHttpReq(reqStr string) *httpReq {
+func newHttpReq(reqStr string) *httpRequest {
 	return parseReq(reqStr)
 }
 
-func parseReq(reqStr string) *httpReq {
-	httpReq := new(httpReq)
+func parseReq(reqStr string) *httpRequest {
+	httpReq := new(httpRequest)
 
 	reqScanner := bufio.NewScanner(strings.NewReader(reqStr))
 	reqScanner.Split(bufio.ScanLines)
@@ -28,7 +28,7 @@ func parseReq(reqStr string) *httpReq {
 	return httpReq
 }
 
-func (h *httpReq) parseStartLine(startLine string) {
+func (h *httpRequest) parseStartLine(startLine string) {
 	s := bufio.NewScanner(strings.NewReader(startLine))
 	s.Split(bufio.ScanWords)
 
