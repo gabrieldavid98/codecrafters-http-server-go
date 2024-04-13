@@ -6,36 +6,28 @@ import (
 )
 
 const (
-	HttpVersion      = "HTTP/1.1"
-	OkResponse       = HttpVersion + " 200 OK\r\n\r\n"
-	NotFoundResponse = HttpVersion + " 404 Not Found\r\n\r\n"
+	HttpVersion                 = "HTTP/1.1"
+	OkResponse                  = HttpVersion + " 200 OK\r\n\r\n"
+	NotFoundResponse            = HttpVersion + " 404 Not Found\r\n\r\n"
+	InternalServerErrorResponse = HttpVersion + " 500 Internal Server Error\r\n\r\n"
 )
 
 type httpResponse struct {
 	status  int
-	headers []header
+	headers headers
 	body    string
 }
 
-type header struct {
-	name  string
-	value string
-}
-
 func (h *httpResponse) withContentLengthHeader() {
-	header := header{
+	h.headers.addFromKeyValue(
 		"Content-Length", fmt.Sprintf("%d", len(h.body)),
-	}
-
-	h.headers = append(h.headers, header)
+	)
 }
 
 func (h *httpResponse) withContentTypeHeader(contentType string) {
-	header := header{
+	h.headers.addFromKeyValue(
 		"Content-Type", contentType,
-	}
-
-	h.headers = append(h.headers, header)
+	)
 }
 
 func (h *httpResponse) String() string {
@@ -48,16 +40,22 @@ func (h *httpResponse) String() string {
 		sb.WriteString(HttpVersion + " 404 Not Found\r\n")
 	}
 
-	for _, header := range h.headers {
-		sb.WriteString(header.String())
-	}
-
+	sb.WriteString(h.headers.String())
 	sb.WriteString("\r\n")
 	sb.WriteString(h.body)
 
 	return sb.String()
 }
 
-func (h header) String() string {
-	return fmt.Sprintf("%s: %s\r\n", h.name, h.value)
+func okText(body string) string {
+	response := &httpResponse{
+		status:  200,
+		body:    body,
+		headers: newHeaders(),
+	}
+
+	response.withContentTypeHeader("text/plain")
+	response.withContentLengthHeader()
+
+	return response.String()
 }

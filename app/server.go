@@ -8,9 +8,6 @@ import (
 )
 
 func main() {
-	// You can use print statements as follows for debugging, they'll be visible when running tests.
-	fmt.Println("Logs from your program will appear here!")
-
 	l, err := net.Listen("tcp", "0.0.0.0:4221")
 	if err != nil {
 		fmt.Println("Failed to bind to port 4221")
@@ -49,12 +46,13 @@ func readConnToString(conn net.Conn) string {
 func responder(conn net.Conn, req *httpRequest) {
 	response := NotFoundResponse
 
-	if req.path == "/" {
+	switch {
+	case req.path == "/":
 		response = OkResponse
-	}
-
-	if strings.HasPrefix(req.path, "/echo/") {
+	case strings.HasPrefix(req.path, "/echo/"):
 		response = respondEcho(req)
+	case req.path == "/user-agent":
+		response = respondUserAgent(req)
 	}
 
 	if _, err := conn.Write([]byte(response)); err != nil {
@@ -65,13 +63,14 @@ func responder(conn net.Conn, req *httpRequest) {
 
 func respondEcho(req *httpRequest) string {
 	param, _ := strings.CutPrefix(req.path, "/echo/")
-	response := &httpResponse{
-		status: 200,
-		body:   param,
+	return okText(param)
+}
+
+func respondUserAgent(req *httpRequest) string {
+	userAgent, ok := req.headers["User-Agent"]
+	if !ok {
+		return InternalServerErrorResponse
 	}
 
-	response.withContentTypeHeader("text/plain")
-	response.withContentLengthHeader()
-
-	return response.String()
+	return okText(userAgent)
 }

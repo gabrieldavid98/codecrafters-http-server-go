@@ -9,6 +9,7 @@ type httpRequest struct {
 	method      string
 	path        string
 	httpVersion string
+	headers     headers
 }
 
 func newHttpReq(reqStr string) *httpRequest {
@@ -16,14 +17,19 @@ func newHttpReq(reqStr string) *httpRequest {
 }
 
 func parseReq(reqStr string) *httpRequest {
-	httpReq := new(httpRequest)
+	var (
+		httpReq = &httpRequest{
+			headers: newHeaders(),
+		}
+		sc = bufio.NewScanner(strings.NewReader(reqStr))
+	)
+	sc.Split(bufio.ScanLines)
 
-	reqScanner := bufio.NewScanner(strings.NewReader(reqStr))
-	reqScanner.Split(bufio.ScanLines)
-
-	reqScanner.Scan()
-	startLine := reqScanner.Text()
+	sc.Scan()
+	startLine := sc.Text()
 	httpReq.parseStartLine(startLine)
+
+	httpReq.parseHeaders(sc)
 
 	return httpReq
 }
@@ -40,4 +46,16 @@ func (h *httpRequest) parseStartLine(startLine string) {
 
 	s.Scan()
 	h.httpVersion = s.Text()
+}
+
+func (h *httpRequest) parseHeaders(s *bufio.Scanner) {
+	for s.Scan() {
+		t := s.Text()
+
+		if len(t) == 0 {
+			break
+		}
+
+		h.headers.addFromString(t)
+	}
 }
