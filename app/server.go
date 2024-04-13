@@ -14,17 +14,20 @@ func main() {
 		os.Exit(1)
 	}
 
-	conn, err := l.Accept()
-	if err != nil {
-		fmt.Println("Error accepting connection: ", err.Error())
-		os.Exit(1)
-	}
-	defer conn.Close()
+	for {
+		conn, err := l.Accept()
+		if err != nil {
+			fmt.Println("Error accepting connection: ", err.Error())
+			os.Exit(1)
+		}
 
-	handleConn(conn)
+		go handleConn(conn)
+	}
 }
 
 func handleConn(conn net.Conn) {
+	defer conn.Close()
+
 	reqStr := readConnToString(conn)
 	fmt.Println(reqStr)
 
