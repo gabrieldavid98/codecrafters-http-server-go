@@ -2,6 +2,9 @@ package main
 
 import (
 	"bufio"
+	"bytes"
+	"io"
+	"strconv"
 	"strings"
 )
 
@@ -10,18 +13,19 @@ type httpRequest struct {
 	path        string
 	httpVersion string
 	headers     headers
+	body        *bytes.Buffer
 }
 
-func newHttpReq(reqStr string) *httpRequest {
-	return parseReq(reqStr)
+func newHttpReq(req *bytes.Buffer) *httpRequest {
+	return parseReq(req)
 }
 
-func parseReq(reqStr string) *httpRequest {
+func parseReq(req *bytes.Buffer) *httpRequest {
 	var (
 		httpReq = &httpRequest{
 			headers: newHeaders(),
 		}
-		sc = bufio.NewScanner(strings.NewReader(reqStr))
+		sc = bufio.NewScanner(req)
 	)
 	sc.Split(bufio.ScanLines)
 
@@ -30,6 +34,7 @@ func parseReq(reqStr string) *httpRequest {
 	httpReq.parseStartLine(startLine)
 
 	httpReq.parseHeaders(sc)
+	httpReq.parseBody(sc)
 
 	return httpReq
 }
@@ -57,5 +62,20 @@ func (h *httpRequest) parseHeaders(s *bufio.Scanner) {
 		}
 
 		h.headers.addFromString(t)
+	}
+}
+
+func (h *httpRequest) parseBody(s *bufio.Scanner) {
+	contentLength, ok := h.headers["Content-Length"]
+	if !ok {
+		return
+	}
+
+	n, _ := strconv.ParseInt(contentLength, 10, 64)
+
+	if s.Scan() {
+		r := bytes.NewReader(s.Bytes())
+		h.body = bytes.NewBuffer(nil)
+		io.CopyN(h.body, r, n)
 	}
 }

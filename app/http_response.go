@@ -11,6 +11,7 @@ const (
 
 var (
 	OkResponse                  = []byte(HttpVersion + " 200 OK\r\n\r\n")
+	CreatedResponse             = []byte(HttpVersion + " 201 Created\r\n\r\n")
 	NotFoundResponse            = []byte(HttpVersion + " 404 Not Found\r\n\r\n")
 	InternalServerErrorResponse = []byte(HttpVersion + " 500 Internal Server Error\r\n\r\n")
 )

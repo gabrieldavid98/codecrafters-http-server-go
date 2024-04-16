@@ -37,22 +37,23 @@ func main() {
 func handleConn(conn net.Conn) {
 	defer conn.Close()
 
-	reqStr := readConnToString(conn)
-	fmt.Println(reqStr)
+	var (
+		req     = readConnToBuffer(conn)
+		httpReq = newHttpReq(req)
+	)
 
-	httpReq := newHttpReq(reqStr)
 	responder(conn, httpReq)
 }
 
-func readConnToString(conn net.Conn) string {
-	buff := make([]byte, 1024)
-	_, err := conn.Read(buff)
+func readConnToBuffer(conn net.Conn) *bytes.Buffer {
+	b := make([]byte, 1024)
+	_, err := conn.Read(b)
 	if err != nil {
 		fmt.Println("Error reading connection: ", err.Error())
 		os.Exit(1)
 	}
 
-	return string(buff)
+	return bytes.NewBuffer(b)
 }
 
 func responder(conn net.Conn, req *httpRequest) {
@@ -90,6 +91,14 @@ func respondUserAgent(req *httpRequest) []byte {
 }
 
 func respondFiles(req *httpRequest) []byte {
+	if req.method == "POST" {
+		return respondFilesPost(req)
+	}
+
+	return respondFilesGet(req)
+}
+
+func respondFilesGet(req *httpRequest) []byte {
 	if len(dir) == 0 {
 		return NotFoundResponse
 	}
@@ -112,4 +121,28 @@ func respondFiles(req *httpRequest) []byte {
 	}
 
 	return okOctetStream(b.Bytes())
+}
+
+func respondFilesPost(req *httpRequest) []byte {
+	if len(dir) == 0 {
+		return NotFoundResponse
+	}
+
+	filename, ok := strings.CutPrefix(req.path, "/files/")
+	if !ok {
+		return InternalServerErrorResponse
+	}
+
+	filePath := path.Join(dir, filename)
+	f, err := os.Create(filePath)
+	if err != nil {
+		return NotFoundResponse
+	}
+	defer f.Close()
+
+	if _, err = io.Copy(f, req.body); err != nil {
+		return InternalServerErrorResponse
+	}
+
+	return CreatedResponse
 }
